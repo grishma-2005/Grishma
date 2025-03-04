@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+        }
+        .product {
+            border-bottom: 1px solid #ddd;
+            padding: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .product img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+        }
+        .product-info {
+            flex: 1;
+        }
+        .product h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .product p {
+            margin: 5px 0;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Search Results</h2>
+
+    {% if products %}
+        {% for product in products %}
+            <div class="product">
+                <img src="{{ product.product_photo }}" alt="{{ product.product_title }}">
+                <div class="product-info">
+                    <h3>
+                        <a href="{{ product.product_url }}" target="_blank">{{ product.product_title }}</a>
+                    </h3>
+                    <p><strong>{{ product.source }} Price:</strong> {{ product.product_price }}</p>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No products found matching your criteria.</p>
+    {% endif %}
+</div>
+
+</body>
+</html>
