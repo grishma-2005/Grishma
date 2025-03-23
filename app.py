@@ -24,6 +24,7 @@ cursor.execute("""
 """)
 db.commit()
 
+#  User Authentication Routes
 @app.route('/')
 def home():
     return render_template('sign-in.html')
@@ -36,36 +37,17 @@ def validate_signin():
     if not email or not phone or len(phone) != 10 or not phone.isdigit():
         return "Invalid email or phone number. <a href='/'>Go back</a>"
 
+    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+    existing_user = cursor.fetchone()
+
+    if not existing_user:
+        cursor.execute("INSERT INTO users (email, phone) VALUES (%s, %s)", (email, phone))
+        db.commit()
+
     session['email'] = email
     session['phone'] = phone
 
-    # Store user data in the database
-    cursor.execute("INSERT INTO users (email, phone) VALUES (%s, %s)", (email, phone))
-    db.commit()
-
-    return redirect(url_for('captcha'))
-
-@app.route('/captcha')
-def captcha():
-    if 'email' not in session or 'phone' not in session:
-        return redirect(url_for('home'))  
-    return render_template('captcha.html')
-
-@app.route('/store-captcha-code', methods=['POST'])
-def store_captcha_code():
-    captcha_code = request.form.get('captcha_code')
-    session['captcha_code'] = captcha_code
-    return '', 204  
-
-@app.route('/validate-captcha', methods=['POST'])
-def validate_captcha():
-    user_captcha = request.form.get('captchaInput')
-    generated_captcha = session.get('captcha_code')
-
-    if user_captcha and generated_captcha and user_captcha.upper() == generated_captcha.upper():
-        return redirect(url_for('index'))
-    else:
-        return "Captcha did not match. <a href='/captcha'>Try Again</a>"
+    return redirect(url_for('index'))
 
 @app.route('/index')
 def index():
@@ -73,6 +55,49 @@ def index():
         return redirect(url_for('home'))
     return render_template('index.html')
 
+#  Wishlist Routes (PLACE IT HERE)
+@app.route('/wishlist', methods=['GET'])
+def wishlist():
+    if 'email' not in session:
+        return redirect(url_for('signin_page'))
+
+    cursor.execute("SELECT * FROM wishlist WHERE user_email = %s", (session['email'],))
+    wishlist_items = cursor.fetchall()
+    return render_template('wishlist.html', wishlist=wishlist_items)
+
+@app.route('/add-to-wishlist', methods=['POST'])
+def add_to_wishlist():
+    if 'email' not in session:
+        return redirect(url_for('signin_page'))
+
+    product_title = request.form.get('product_title')
+    product_photo = request.form.get('product_photo')
+    product_price = request.form.get('product_price')
+    product_url = request.form.get('product_url')
+    source = request.form.get('source')
+
+    cursor.execute("""
+        INSERT INTO wishlist (user_email, product_title, product_photo, product_price, product_url, source)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (session['email'], product_title, product_photo, product_price, product_url, source))
+    db.commit()
+
+    return redirect(url_for('wishlist'))
+
+@app.route('/remove-from-wishlist', methods=['POST'])
+def remove_from_wishlist():
+    if 'email' not in session:
+        return redirect(url_for('signin_page'))
+
+    product_title = request.form.get('product_title')
+
+    cursor.execute("DELETE FROM wishlist WHERE user_email = %s AND product_title = %s",
+                   (session['email'], product_title))
+    db.commit()
+
+    return redirect(url_for('wishlist'))
+
+#  Search Function (AFTER Wishlist Routes)
 @app.route('/search', methods=['POST'])
 def search():
     query = request.form.get('query')
@@ -80,54 +105,48 @@ def search():
     if not query:
         return "No search query provided!", 400
 
-    color_filter = extract_color_from_query(query)
+    print(f"Searching for: {query}")  # Debugging
 
     amazon_products = fetch_amazon_products(query)
     aliexpress_products = fetch_aliexpress_products(query)
 
+    if not amazon_products and not aliexpress_products:
+        print("No products found from APIs!")  # Debugging
+
     all_products = amazon_products + aliexpress_products
-
     all_products = remove_duplicates(all_products)
-
-    if color_filter:
-        all_products = [product for product in all_products if color_filter in product.get('product_title', '').lower()]
 
     return render_template('result.html', products=all_products, query=query)
 
-def extract_color_from_query(query):
-    colors = ['red', 'blue', 'green', 'black', 'white', 'yellow', 'gold', 'silver', 'purple', 'pink']
-    for color in colors:
-        if color in query.lower():
-            return color
-    return None
-
+#  Helper Functions (LAST)
 def fetch_amazon_products(query):
     url = "https://real-time-amazon-data.p.rapidapi.com/search"
     headers = {
-        "X-RapidAPI-Key": "2c179a882amsh5e2b1e455d1f66bp143ee7jsn590ca4a957d4",
+        "X-RapidAPI-Key": "5d58e9e70fmsh6a23c92ad4571c6p1c3895jsn9f1f8c12ce6d",
         "X-RapidAPI-Host": "real-time-amazon-data.p.rapidapi.com"
     }
     params = {"query": query, "country": "IN"}
 
     response = requests.get(url, headers=headers, params=params)
+    print(response.status_code, response.text)  # Debugging API Response
+
     if response.status_code == 200:
         data = response.json()
-        products = data.get("data", {}).get("products", [])
-        for product in products:
-            product['source'] = 'Amazon'
-        return products
+        return data.get("data", {}).get("products", [])
     else:
         return []
 
 def fetch_aliexpress_products(query):
     url = "https://aliexpress-datahub.p.rapidapi.com/search"
     headers = {
-        "X-RapidAPI-Key": "5b59bdb511mshc1f870121bdf79cp193064jsn118bb1ad689a",
+        "X-RapidAPI-Key": "5d58e9e70fmsh6a23c92ad4571c6p1c3895jsn9f1f8c12ce6d",
         "X-RapidAPI-Host": "aliexpress-datahub.p.rapidapi.com"
     }
     params = {"q": query, "page": "1"}
 
     response = requests.get(url, headers=headers, params=params)
+    print(response.status_code, response.text)  # Debugging API Response
+
     if response.status_code == 200:
         data = response.json()
         products = []
@@ -148,20 +167,26 @@ def remove_duplicates(products):
 
     for product in products:
         title = product.get('product_title', '').strip().lower()
-        price_str = product.get('product_price', '').replace('₹', '').replace(',', '').strip()
+        price_str = product.get('product_price', '')
+
+        if price_str is None:  # Handle NoneType price
+            price_str = "0"  # Default value for missing prices
+
+        price_str = price_str.replace('₹', '').replace(',', '').strip()
 
         try:
             price = float(price_str)
         except ValueError:
-            price = float('inf')
+            price = float('inf')  # Set to a very high value if price is not a valid number
 
         if title in unique_products:
-            if price < unique_products[title]['price']:
+            if price < unique_products[title]['price']:  # Keep the cheaper product
                 unique_products[title] = {'product': product, 'price': price}
         else:
             unique_products[title] = {'product': product, 'price': price}
 
     return [entry['product'] for entry in unique_products.values()]
+
 
 if __name__ == '__main__':
     app.run(debug=True)
