@@ -56,7 +56,11 @@
     </style>
 </head>
 <body>
-
+<nav style="background-color: #007bff; padding: 10px; text-align: center;">
+    <a href="/" style="color: white; text-decoration: none; margin: 0 15px;">Home</a>
+    <a href="/wishlist" style="color: white; text-decoration: none; margin: 0 15px;">View Wishlist</a>
+    <a href="/logout" style="color: white; text-decoration: none; margin: 0 15px;">Logout</a>
+</nav>
 <div class="container">
     <h2>Search Results</h2>
 
@@ -69,6 +73,15 @@
                         <a href="{{ product.product_url }}" target="_blank">{{ product.product_title }}</a>
                     </h3>
                     <p><strong>{{ product.source }} Price:</strong> {{ product.product_price }}</p>
+                    <form action="/add-to-wishlist" method="POST">
+                        <input type="hidden" name="product_title" value="{{ product.product_title }}">
+                        <input type="hidden" name="product_photo" value="{{ product.product_photo }}">
+                        <input type="hidden" name="product_price" value="{{ product.product_price }}">
+                        <input type="hidden" name="product_url" value="{{ product.product_url }}">
+                        <input type="hidden" name="source" value="{{ product.source }}">
+                        <button type="submit" class="wishlist-btn">Add to Wishlist</button>
+                    </form>
+
                 </div>
             </div>
         {% endfor %}
