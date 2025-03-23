@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wishlist</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { width: 100%; max-width: 800px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; }
+        .product { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #ddd; padding: 15px 0; }
+        .product img { width: 100px; height: 100px; object-fit: cover; border: 1px solid #ddd; }
+        .product-info { flex: 1; }
+        .product h3 { margin: 0; font-size: 18px; }
+        .product p { margin: 5px 0; }
+        .wishlist-btn { background-color: red; color: white; padding: 5px 10px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>My Wishlist</h2>
+
+    {% if wishlist %}
+        {% for item in wishlist %}
+            <div class="product">
+                <img src="{{ item[3] }}" alt="{{ item[2] }}">
+                <div class="product-info">
+                    <h3><a href="{{ item[5] }}" target="_blank">{{ item[2] }}</a></h3>
+                    <p><strong>Price:</strong> {{ item[4] }}</p>
+                    <p><strong>Source:</strong> {{ item[6] }}</p>
+                    <form action="/remove-from-wishlist" method="POST">
+                        <input type="hidden" name="product_title" value="{{ item[2] }}">
+                        <button type="submit" class="wishlist-btn">Remove</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Your wishlist is empty.</p>
+    {% endif %}
+</div>
+
+</body>
+</html>
